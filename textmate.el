@@ -139,7 +139,9 @@ completing filenames and symbols (`ido' by default)")
 	   (define-key map [(control c)(control k)] 'comment-or-uncomment-region-or-line)
 	   (define-key map [(meta t)] 'textmate-goto-file)
 	   (define-key map [(meta shift l)] 'textmate-select-line)
-	   (define-key map [(meta shift t)] 'textmate-goto-symbol)))
+	   (define-key map [(meta shift t)] 'textmate-goto-symbol)
+	   (define-key map [(control super up)] 'textmate-move-line-up)
+       (define-key map [(control super down)] 'textmate-move-line-down)))
 	  map))
 
 (defvar *textmate-project-root* nil
