@@ -101,7 +101,9 @@ completing filenames and symbols (`ido' by default)")
 	   (define-key map (kbd "A-/") 'comment-or-uncomment-region-or-line)
 	   (define-key map (kbd "A-L") 'textmate-select-line)
 	   (define-key map (kbd "A-t") 'textmate-goto-file)
-	   (define-key map (kbd "A-T") 'textmate-goto-symbol))
+	   (define-key map (kbd "A-T") 'textmate-goto-symbol)
+	   (define-key map (kbd "A-C-<up>") 'textmate-move-line-up)
+	   (define-key map (kbd "A-C-<down>") 'textmate-move-line-down))
 	  ((and (featurep 'mac-carbon) (eq window-system 'mac) mac-key-mode)
 	   (define-key map [(alt meta return)] 'textmate-next-line)
 	   (define-key map [(alt meta t)] 'textmate-clear-cache)
@@ -112,7 +114,9 @@ completing filenames and symbols (`ido' by default)")
 	   (define-key map [(meta /)] 'comment-or-uncomment-region-or-line)
 	   (define-key map [(alt t)] 'textmate-goto-file)
            (define-key map [(alt shift l)] 'textmate-select-line)
-	   (define-key map [(alt shift t)] 'textmate-goto-symbol))
+	   (define-key map [(alt shift t)] 'textmate-goto-symbol)
+	   (define-key map [(alt control up)] 'textmate-move-line-up)
+	   (define-key map [(alt control down)] 'textmate-move-line-down))
 	  ((featurep 'ns)  ;; Emacs.app
 	   (define-key map [(super meta return)] 'textmate-next-line)
 	   (define-key map [(super meta t)] 'textmate-clear-cache)
@@ -123,7 +127,9 @@ completing filenames and symbols (`ido' by default)")
 	   (define-key map [(super /)] 'comment-or-uncomment-region-or-line)
 	   (define-key map [(super t)] 'textmate-goto-file)
 	   (define-key map [(super shift l)] 'textmate-select-line)
-	   (define-key map [(super shift t)] 'textmate-goto-symbol))
+	   (define-key map [(super shift t)] 'textmate-goto-symbol)
+	   (define-key map [(super control up)] 'textmate-move-line-up)
+	   (define-key map [(super control down)] 'textmate-move-line-down))
 	  (t ;; Any other version
 	   (define-key map [(meta return)] 'textmate-next-line)
 	   (define-key map [(control c)(control t)] 'textmate-clear-cache)
@@ -274,6 +280,25 @@ Symbols matching the text at point are put first in the completion list."
       (textmate-completing-read 
        "Find file: "
        (textmate-cached-project-files root))))))
+
+(defun textmate-move-line-down ()
+ "Move the current line down one.
+  Not quite the same as TextMate's as the point moves *with* the line."
+ (interactive)
+ (let ((col (current-column)))
+   (save-excursion (next-line)
+     (transpose-lines 1))
+   (next-line)
+   (move-to-column col)))
+
+(defun textmate-move-line-up ()
+  "Move the current line up one.
+  Not quite the same as TextMate's as the point moves *with* the line."
+  (interactive)
+  (let ((col (current-column)))
+    (save-excursion (next-line)
+      (transpose-lines -1))
+    (move-to-column col)))
 
 (defun textmate-clear-cache ()
   "Clears the project root and project files cache. Use after adding files."
