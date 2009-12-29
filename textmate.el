@@ -7,6 +7,7 @@
 ;; Keywords: textmate osx mac
 ;; Created: 22 Nov 2008
 ;; Author: Chris Wanstrath <chris@ozmm.org>
+;; Version: 1
 
 ;; This file is NOT part of GNU Emacs.
 
@@ -364,12 +365,12 @@ Symbols matching the text at point are put first in the completion list."
   (member (car names) (directory-files root)))
 
 (defun root-matches(root names)
-  (if (root-match root names)
-      (root-match root names)
-      (if (eq (length (cdr names)) 0)
-          'nil
-          (root-matches root (cdr names))
-          )))
+	(if (root-match root names)
+			(root-match root names)
+			(if (eq (length (cdr names)) 0)
+					'nil
+					(root-matches root (cdr names))
+					)))
 
 (defun textmate-find-project-root (&optional root)
   "Determines the current project root by recursively searching for an indicator."
