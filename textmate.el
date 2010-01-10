@@ -296,7 +296,7 @@ Symbols matching the text at point are put first in the completion list."
       *textmate-gf-exclude*
       "' | sed 's:"
       *textmate-project-root*
-      "/::'")) "\n" t))
+      "::'")) "\n" t))
 
 (defun textmate-cached-project-files (&optional root)
   "Finds and caches all files in a given project."
