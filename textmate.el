@@ -274,38 +274,47 @@ Symbols matching the text at point are put first in the completion list."
       (expand-file-name root) "/"
       (textmate-completing-read
        "Find file: "
-       (textmate-cached-project-files root))))))
+       (cadr (textmate-find-project-files root)))))))
 
 (defun textmate-clear-cache ()
   "Clears the project root and project files cache. Use after adding files."
   (interactive)
   (setq *textmate-project-root* nil)
-  (setq *textmate-project-files* nil)
+  (setq *textmate-project-files* '())
   (message "textmate-mode cache cleared."))
 
 ;;; Utilities
 
 (defun textmate-project-files (root)
   "Finds all files in a given project."
-  (split-string
-    (shell-command-to-string
-     (concat
-      "find "
-      root
-      " -type f  | grep -vE '"
-      *textmate-gf-exclude*
-      "' | sed 's:"
-      *textmate-project-root*
-      "::'")) "\n" t))
+  (message (concat "textmate-mode: finding file list for project " root))
+  (let ((relative-paths (split-string
+                         (shell-command-to-string
+                          (concat
+                           "find "
+                           root
+                           " -type f  | grep -vE '"
+                           *textmate-gf-exclude*
+                           "' | sed 's:"
+                           *textmate-project-root*
+                           "::'")) "\n" t)))
+    `(,root ,relative-paths)))
 
-(defun textmate-cached-project-files (&optional root)
-  "Finds and caches all files in a given project."
-  (cond
-   ((null textmate-use-file-cache) (textmate-project-files root))
-   ((equal (textmate-project-root) (car *textmate-project-files*))
-    (cdr *textmate-project-files*))
-   (t (cdr (setq *textmate-project-files*
-                 `(,root . ,(textmate-project-files root)))))))
+(defun textmate-find-and-cache-project-files-for (root)
+  (let ((new-cache (textmate-project-files root)))
+    (add-to-list '*textmate-project-files* new-cache)
+    new-cache))
+
+(defun textmate-find-or-load-project-file-cache (root find-among-cached-nodes) 
+  (let ((current-cache-node (car find-among-cached-nodes)))
+    (cond ((null current-cache-node) (textmate-find-and-cache-project-files-for root))
+          ((equal (car current-cache-node) root) current-cache-node)
+          (t (textmate-find-or-load-project-file-cache root (cdr find-among-cached-nodes))))))
+
+(defun textmate-find-project-files (root)
+  (if textmate-use-file-cache 
+      (textmate-find-or-load-project-file-cache root *textmate-project-files*)
+    (textmate-project-files root)))
 
 (defun textmate-project-root ()
   "Returns the current project root."
@@ -326,8 +335,7 @@ Symbols matching the text at point are put first in the completion list."
 			(root-match root names)
 			(if (eq (length (cdr names)) 0)
 					'nil
-					(root-matches root (cdr names))
-					)))
+					(root-matches root (cdr names)))))
 
 (defun textmate-find-project-root (&optional root)
   "Determines the current project root by recursively searching for an indicator."
