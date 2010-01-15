@@ -149,13 +149,12 @@ completing filenames and symbols (`ido' by default)")
   (define-key ido-completion-map [up] 'ido-prev-match)
   (define-key ido-completion-map [down] 'ido-next-match))
 
-(defun textmate-completing-read (&rest args)
-  "Uses `*textmate-completing-function-alist*' to call the appropriate completing
-function."
+(defun textmate-completing-read (project-files &rest args)
+  "Uses `*textmate-completing-function-alist*' to call the appropriate completing function."
   (let ((reading-fn
          (cadr (assoc textmate-completing-library
                       *textmate-completing-function-alist*))))
-  (apply (symbol-function reading-fn) args)))
+    (gethash (apply (symbol-function reading-fn) args) (caddr project-files))))
 
 ;;; allow-line-as-region-for-function adds an "-or-line" version of
 ;;; the given comment function which (un)comments the current line is
@@ -269,12 +268,11 @@ Symbols matching the text at point are put first in the completion list."
         "Can't find a suitable project root ("
         (string-join " " *textmate-project-roots* )
         ")")))
-    (find-file
-     (concat
-      (expand-file-name root) "/"
-      (textmate-completing-read
-       "Find file: "
-       (cadr (textmate-find-project-files root)))))))
+    (let ((project-files (textmate-find-project-files root)))
+      (find-file
+       (concat
+        (expand-file-name root) "/"
+        (textmate-completing-read project-files "Find file: " (cadr project-files)))))))
 
 (defun textmate-clear-cache ()
   "Clears the project root and project files cache. Use after adding files."
@@ -284,6 +282,28 @@ Symbols matching the text at point are put first in the completion list."
   (message "textmate-mode cache cleared."))
 
 ;;; Utilities
+
+(defun textmate-all-keys (hash-table)
+  (let ((all-keys '()))
+    (maphash (lambda (key value) (add-to-list 'all-keys key)) hash-table)
+    all-keys))
+
+(defun textmate-file-base-name-map (rel-paths)
+  (let ((base-to-rel-map (make-hash-table :test 'equal))
+        (non-unique-entry-to-dir-map (make-hash-table :test 'equal)))
+    (while rel-paths
+      (let ((path (car rel-paths)))
+        (textmate-populate-file-base-name-map path base-to-rel-map non-unique-entry-to-dir-map))
+      (setq rel-paths (cdr rel-paths)))
+    base-to-rel-map))
+
+(defun textmate-populate-file-base-name-map (rel-path base-name-map conflict-map)
+  (let ((base-name (file-name-nondirectory rel-path))
+        (dir-name (file-name-directory rel-path)))
+    (puthash base-name rel-path base-name-map)
+    ;; (if (gethash base-name base-name-map)
+    ;;     )
+    ))
 
 (defun textmate-project-files (root)
   "Finds all files in a given project."
@@ -298,7 +318,8 @@ Symbols matching the text at point are put first in the completion list."
                            "' | sed 's:"
                            *textmate-project-root*
                            "::'")) "\n" t)))
-    `(,root ,relative-paths)))
+    (let ((base-path-map (textmate-file-base-name-map relative-paths)))
+      `(,root ,(textmate-all-keys base-path-map) ,base-path-map))))
 
 (defun textmate-find-and-cache-project-files-for (root)
   (let ((new-cache (textmate-project-files root)))
