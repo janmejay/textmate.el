@@ -154,7 +154,8 @@ completing filenames and symbols (`ido' by default)")
   (let ((reading-fn
          (cadr (assoc textmate-completing-library
                       *textmate-completing-function-alist*))))
-    (gethash (apply (symbol-function reading-fn) args) (caddr project-files))))
+    (let ((selected-base-name (apply (symbol-function reading-fn) args)))
+      (concat (gethash selected-base-name (caddr project-files)) selected-base-name))))
 
 ;;; allow-line-as-region-for-function adds an "-or-line" version of
 ;;; the given comment function which (un)comments the current line is
@@ -297,13 +298,27 @@ Symbols matching the text at point are put first in the completion list."
       (setq rel-paths (cdr rel-paths)))
     base-to-rel-map))
 
+(defun textmate-insert-with-parent-dir-in-base-name (dir-name base-name base-name-map conflict-map)
+  (let ((no-terminal-seperator-dir-name (replace-regexp-in-string "\/$" "" (or dir-name ""))))
+    (let ((existing-parent-dir-name (file-name-directory no-terminal-seperator-dir-name))
+          (existing-immediate-dir-name (file-name-nondirectory no-terminal-seperator-dir-name)))
+      (textmate-insert-file-name-map-entry existing-parent-dir-name (concat existing-immediate-dir-name (and dir-name "/") base-name) base-name-map conflict-map))))
+
+(defun textmate-insert-file-name-map-entry (dir-name base-name base-name-map conflict-map)
+  (let ((existing-dir-name (gethash base-name base-name-map)))
+    (if existing-dir-name 
+        (progn 
+          (remhash base-name base-name-map)
+          (puthash base-name dir-name conflict-map)
+          (textmate-insert-with-parent-dir-in-base-name existing-dir-name base-name base-name-map conflict-map)))
+    (if (gethash base-name conflict-map)
+        (textmate-insert-with-parent-dir-in-base-name dir-name base-name base-name-map conflict-map)
+      (puthash base-name dir-name base-name-map))))
+
 (defun textmate-populate-file-base-name-map (rel-path base-name-map conflict-map)
   (let ((base-name (file-name-nondirectory rel-path))
         (dir-name (file-name-directory rel-path)))
-    (puthash base-name rel-path base-name-map)
-    ;; (if (gethash base-name base-name-map)
-    ;;     )
-    ))
+    (textmate-insert-file-name-map-entry dir-name base-name base-name-map conflict-map)))
 
 (defun textmate-project-files (root)
   "Finds all files in a given project."
